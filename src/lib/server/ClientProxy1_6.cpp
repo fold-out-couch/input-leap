@@ -429,9 +429,26 @@ bool ClientProxy1_6::recvInfo()
     }
     LOG_DEBUG("received client \"%s\" info shape=%d,%d %dx%d at %d,%d", getName().c_str(), x, y, w, h, mx, my);
 
-    // validate
+    // validate — if client reports 0x0 (e.g. lid closed), use fallback from config
     if (w <= 0 || h <= 0) {
-        return false;
+        std::int16_t fw = 0, fh = 0;
+        std::string path = std::string(getenv("HOME") ? getenv("HOME") : "") +
+            "/.config/input-leap/fallback-screen.conf";
+        FILE* f = fopen(path.c_str(), "r");
+        if (f) {
+            int tw, th;
+            if (fscanf(f, "%d %d", &tw, &th) == 2 && tw > 0 && th > 0) {
+                fw = static_cast<std::int16_t>(tw);
+                fh = static_cast<std::int16_t>(th);
+            }
+            fclose(f);
+        }
+        if (fw <= 0 || fh <= 0) {
+            return false;
+        }
+        LOG_NOTE("client \"%s\" reported 0x0 screen, using fallback %dx%d", getName().c_str(), fw, fh);
+        w = fw;
+        h = fh;
     }
     if (mx < x || mx >= x + w || my < y || my >= y + h) {
         mx = x + w / 2;

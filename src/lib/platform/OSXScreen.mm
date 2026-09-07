@@ -38,6 +38,7 @@
 #include "base/Time.h"
 
 #include <math.h>
+#include <cstdlib>
 #include <mach-o/dyld.h>
 #include <AvailabilityMacros.h>
 #include <IOKit/hidsystem/event_status_driver.h>
@@ -1500,15 +1501,24 @@ OSXScreen::updateScreenShape()
 		totalBounds   = CGRectUnion(totalBounds, bounds);
 	}
 
-	// get shape of default screen
-    m_x = (std::int32_t)totalBounds.origin.x;
-    m_y = (std::int32_t)totalBounds.origin.y;
-    m_w = (std::int32_t)totalBounds.size.width;
-    m_h = (std::int32_t)totalBounds.size.height;
-
-	// get center of default screen
   CGDirectDisplayID main = CGMainDisplayID();
   const CGRect rect = CGDisplayBounds(main);
+
+	// Screen shape used for edge-jump detection. Upstream uses the union of
+	// all displays, but with a non-rectangular arrangement (e.g. a secondary
+	// display offset below-right of the main one) the OS pins the cursor at
+	// the main display's real edge before it ever reaches the union's edge,
+	// so jumps through the main display never fire. Default to the main
+	// display's bounds so its edges are the jump edges. Set
+	// INPUTLEAP_SHAPE_UNION=1 to restore upstream behaviour.
+	const char* useUnion = getenv("INPUTLEAP_SHAPE_UNION");
+	const CGRect& shape = (useUnion != nullptr && useUnion[0] == '1') ? totalBounds : rect;
+    m_x = (std::int32_t)shape.origin.x;
+    m_y = (std::int32_t)shape.origin.y;
+    m_w = (std::int32_t)shape.size.width;
+    m_h = (std::int32_t)shape.size.height;
+
+	// get center of default screen
   m_xCenter = (rect.origin.x + rect.size.width) / 2;
   m_yCenter = (rect.origin.y + rect.size.height) / 2;
 

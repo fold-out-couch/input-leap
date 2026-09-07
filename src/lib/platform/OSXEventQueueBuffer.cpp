@@ -99,7 +99,14 @@ bool OSXEventQueueBuffer::addEvent(std::uint32_t dataID)
 
     if (error == noErr) {
 
-        assert(m_carbonEventQueue != nullptr);
+        // During display reconfiguration, EventQueue::set_buffer() replaces
+        // this buffer and the CGEvent tap callback can fire before init()
+        // has set m_carbonEventQueue. PostEventToQueue would dereference
+        // null and SIGSEGV. Drop the event instead of crashing.
+        if (m_carbonEventQueue == nullptr) {
+            ReleaseEvent(event);
+            return false;
+        }
 
         error = PostEventToQueue(
             m_carbonEventQueue,
