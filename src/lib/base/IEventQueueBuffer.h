@@ -46,6 +46,16 @@ public:
     */
     virtual    void init() = 0;
 
+    //! Deinitialize
+    /*!
+    Called on the event loop thread when the loop exits, before that thread
+    ends. Platform buffers that hold thread-owned resources (e.g. a Carbon
+    event queue) must drop them here so a late addEvent() from another
+    thread (e.g. a CGEvent tap callback on the main thread) is rejected
+    instead of touching a disposed object.
+    */
+    virtual void deinit() { }
+
     //! Block waiting for an event
     /*!
     Wait for an event in the event queue buffer for up to \p timeout

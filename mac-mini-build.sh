@@ -43,6 +43,10 @@ echo "built: $OUT"
 if [ "${1:-}" = "--install" ]; then
   cp "$APP/input-leaps" "$APP/input-leaps.prev"
   cp "$OUT" "$APP/input-leaps"
+  # Trap 3: MUST re-sign in place AFTER the copy. cp rewrites the existing
+  # inode and the kernel keeps the old file's cached signature, so the new
+  # binary is killed at launch with "Code Signature Invalid / Invalid Page".
+  codesign --sign - --force --identifier "$IDENT" "$APP/input-leaps" 2>/dev/null
   launchctl kickstart -k "gui/$(id -u)/com.inputleap.server"
   sleep 3
   if tail -1 /tmp/input-leaps.err | grep -q "assistive devices"; then

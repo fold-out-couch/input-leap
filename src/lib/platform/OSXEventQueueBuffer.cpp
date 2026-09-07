@@ -46,6 +46,16 @@ OSXEventQueueBuffer::init()
 }
 
 void
+OSXEventQueueBuffer::deinit()
+{
+    // The Carbon queue belongs to the event loop thread and is disposed
+    // when that thread exits. Forget it now (the caller holds the
+    // EventQueue mutex) so addEvent() from the main thread's CGEvent tap
+    // drops the event instead of posting to a dead queue.
+    m_carbonEventQueue = nullptr;
+}
+
+void
 OSXEventQueueBuffer::waitForEvent(double timeout)
 {
     EventRef event;

@@ -78,6 +78,15 @@ EventQueue::loop()
         Event::deleteData(event);
         getEvent(event);
     }
+
+    // this thread is about to end; let the buffer drop anything owned by
+    // it before other threads (still running) try to add events.
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (buffer_) {
+            buffer_->deinit();
+        }
+    }
 }
 
 void EventQueue::set_buffer(std::unique_ptr<IEventQueueBuffer> buffer)
@@ -216,8 +225,8 @@ void EventQueue::add_event_to_buffer(Event&& event)
     // store the event's data locally
     std::uint32_t eventID = save_event(std::move(event));
 
-    // add it
-    if (!buffer_->addEvent(eventID)) {
+    // add it (no buffer during shutdown: drop the event)
+    if (!buffer_ || !buffer_->addEvent(eventID)) {
         // failed to send event
         auto removed_event = removeEvent(eventID);
         Event::deleteData(removed_event);

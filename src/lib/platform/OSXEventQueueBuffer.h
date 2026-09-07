@@ -33,6 +33,7 @@ public:
 
     // IEventQueueBuffer overrides
     virtual void init();
+    virtual void deinit();
     virtual void waitForEvent(double timeout);
     virtual Type getEvent(Event& event, std::uint32_t& dataID);
     virtual bool addEvent(std::uint32_t dataID);
